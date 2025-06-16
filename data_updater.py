@@ -1,4 +1,3 @@
-# data_updater.py
 import pandas as pd
 import yfinance as yf
 
