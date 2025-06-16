@@ -1,51 +1,10 @@
-# app.py
 import streamlit as st
 import pandas as pd
 import os
-import time
-from datetime import datetime, timedelta
-from data_updater import update_etf_data
 
-st.set_page_config(page_title="📊 ETF 總表", layout="wide")
-st.title("📊 台股 ETF 總表 - Step 1 測試版（自動更新版）")
+st.set_page_config(page_title="📊 MyETF助手 Step 2", layout="wide")
 
-UPDATE_TIMESTAMP_FILE = "last_update.txt"
-
-def should_auto_update():
-    if not os.path.exists(UPDATE_TIMESTAMP_FILE):
-        return True
-    with open(UPDATE_TIMESTAMP_FILE, "r") as f:
-        last_time = datetime.strptime(f.read(), "%Y-%m-%d %H:%M:%S")
-        return datetime.now() - last_time > timedelta(hours=6)
-
-def update_timestamp():
-    with open(UPDATE_TIMESTAMP_FILE, "w") as f:
-        f.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
-# 自動更新判斷
-if should_auto_update():
-    try:
-        update_etf_data()
-        update_timestamp()
-        st.success("🔁 自動更新成功")
-    except Exception as err:
-        st.warning(f"⚠️ 自動更新失敗：{err}")
-
-# 顯示上次更新時間
-if os.path.exists(UPDATE_TIMESTAMP_FILE):
-    with open(UPDATE_TIMESTAMP_FILE, "r") as f:
-        st.caption(f"📅 上次資料更新時間：{f.read()}")
-
-# 手動更新按鈕
-if st.button("🔁 手動更新資料"):
-    try:
-        update_etf_data()
-        update_timestamp()
-        st.success("✅ 手動更新成功！請重新整理查看最新資料")
-    except Exception as e:
-        st.error(f"❌ 更新失敗：{e}")
-
-# 顯示 ETF 資料
+# 資料讀取
 @st.cache_data(ttl=3600)
 def load_data():
     try:
@@ -53,8 +12,47 @@ def load_data():
     except:
         return pd.DataFrame()
 
+# 自選清單儲存路徑
+watchlist_file = "watchlist.csv"
+
+def load_watchlist():
+    if os.path.exists(watchlist_file):
+        return pd.read_csv(watchlist_file)
+    else:
+        return pd.DataFrame(columns=["代碼", "名稱"])
+
+def save_watchlist(df):
+    df.to_csv(watchlist_file, index=False)
+
+# 頁面選單
+tab = st.sidebar.radio("📌 選擇功能", ["推薦清單", "自選清單"])
+
 df = load_data()
-if df.empty:
-    st.warning("⚠️ 尚無資料，請先按下『手動更新資料』")
-else:
-    st.dataframe(df, use_container_width=True)
+watchlist = load_watchlist()
+
+if tab == "推薦清單":
+    st.title("🌟 推薦清單")
+    if df.empty:
+        st.warning("尚無 ETF 資料，請先回首頁更新。")
+    else:
+        st.caption("以下為系統根據殖利率推薦的 ETF（殖利率 > 5）")
+        recommend = df[df["殖利率"] > 5]
+        for i, row in recommend.iterrows():
+            st.write(f"**{row['代碼']} - {row['名稱']}**｜殖利率：{row['殖利率']}%")
+            if st.button(f"➕ 加入自選 - {row['代碼']}", key=f"add_{row['代碼']}"):
+                if row['代碼'] not in watchlist['代碼'].values:
+                    watchlist = pd.concat([watchlist, pd.DataFrame([row[["代碼", "名稱"]]])], ignore_index=True)
+                    save_watchlist(watchlist)
+                    st.success(f"{row['代碼']} 已加入自選清單！")
+
+elif tab == "自選清單":
+    st.title("🗂 自選清單")
+    if watchlist.empty:
+        st.info("尚未加入任何自選 ETF")
+    else:
+        st.dataframe(watchlist, use_container_width=True)
+        remove_code = st.text_input("輸入想移除的 ETF 代碼")
+        if st.button("❌ 移除"):
+            watchlist = watchlist[watchlist["代碼"] != remove_code]
+            save_watchlist(watchlist)
+            st.success(f"{remove_code} 已從自選清單移除")
