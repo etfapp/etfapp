@@ -15,14 +15,13 @@ def update_etf_data():
             hist = ticker.history(period="5d")
             price = hist["Close"].iloc[-1] if not hist.empty else None
             info = ticker.info
-            rsi = None
             dividend_yield = info.get("dividendYield", 0) or 0
             result.append({
                 "代碼": code.replace(".TW", ""),
                 "名稱": name,
                 "價格": round(price, 2) if price else "N/A",
                 "殖利率": round(dividend_yield * 100, 2),
-                "RSI": rsi,
+                "RSI": None,
                 "技術燈號": "🟢" if dividend_yield > 0.05 else "⚪️"
             })
         except:
