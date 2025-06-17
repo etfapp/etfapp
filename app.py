@@ -69,10 +69,48 @@ elif tab == "📈 動態清單":
     except Exception as e:
         st.error(f"讀取推薦清單失敗：{e}")
 
+
 elif tab == "🗂 自選清單":
     st.title("🗂 我的自選清單")
-    st.info("這裡將整合水位計算機與存股模擬器")
 
+    if "watchlist" not in st.session_state:
+        st.session_state.watchlist = []
+
+    new_etf = st.text_input("🔍 輸入想加入的 ETF 代碼（如 0050）")
+    if st.button("➕ 加入自選"):
+        if new_etf and new_etf not in st.session_state.watchlist:
+            st.session_state.watchlist.append(new_etf)
+            st.success(f"{new_etf} 已加入自選清單")
+
+    st.subheader("📋 自選 ETF 清單")
+    if st.session_state.watchlist:
+        st.write(st.session_state.watchlist)
+    else:
+        st.info("尚未加入任何自選 ETF")
+
+    st.subheader("💧 水位計算機")
+    market_position = st.slider("目前市場位階建議佈局比例 (%)", 0, 100, 40)
+    cash = st.number_input("請輸入目前手中現金 (元)", value=100000)
+    deployable = int(cash * market_position / 100)
+    st.write(f"💰 建議可佈局金額：約 {deployable:,} 元")
+
+    st.subheader("📐 存股計算機")
+    layout_count = st.number_input("預計佈局 ETF 檔數", min_value=1, value=2)
+    st.write("👇 系統將幫你平均分配以下每檔投入金額與估算股數")
+    if st.button("📊 計算佈局股數"):
+        if not st.session_state.watchlist:
+            st.warning("請先加入至少 1 檔自選 ETF")
+        else:
+            amount_per_etf = deployable / layout_count
+            df = pd.read_csv("etf_data.csv")
+            for etf in st.session_state.watchlist[:layout_count]:
+                row = df[df["代碼"] == etf]
+                if not row.empty:
+                    price = float(row.iloc[0]["價格"])
+                    shares = int(amount_per_etf // price)
+                    st.write(f"✅ {etf} 建議佈局 {shares} 股（單價 {price} 元）")
+                else:
+                    st.write(f"⚠️ {etf} 資料缺失")
 elif tab == "🚨 升溫區":
     st.title("🚨 升溫區")
     st.info("這裡會列出建議減碼／賣出的 ETF 並顯示原因")
