@@ -79,13 +79,61 @@ elif tab == "📈 動態清單":
 
 
 elif tab == "🗂 自選清單":
-    st.title('📂 我的自選清單')
+    st.title("🗂 我的自選清單")
+    watchlist_file = "watchlist.csv"
+    df = load_data()
+
+    # 新增自選
+    code_input = st.text_input("🔍 輸入想加入的 ETF 代碼（如 0050）", key="add_code")
+    if st.button("➕ 加入自選"):
+        if code_input:
+            try:
+                watch_df = pd.read_csv(watchlist_file) if os.path.exists(watchlist_file) else pd.DataFrame(columns=["代碼"])
+                if code_input not in watch_df["代碼"].astype(str).values:
+                    watch_df = pd.concat([watch_df, pd.DataFrame([{"代碼": code_input}])], ignore_index=True)
+                    watch_df.to_csv(watchlist_file, index=False)
+                    st.success(f"{code_input} 已加入自選清單")
+                else:
+                    st.info(f"{code_input} 已在自選清單中")
+            except Exception as e:
+                st.error(f"無法加入：{e}")
+
+    # 顯示自選清單詳細資料
     try:
-        watchlist_df = pd.read_csv('watchlist.csv')
-        expected_cols = ['代碼', '名稱', '價格', '殖利率', '技術燈號']
-        if all(col in watchlist_df.columns for col in expected_cols):
-            st.dataframe(watchlist_df[expected_cols], use_container_width=True)
-        else:
-            st.warning('⚠️ 自選清單格式錯誤，請確認 watchlist.csv 欄位正確')
+        watch_df = pd.read_csv(watchlist_file) if os.path.exists(watchlist_file) else pd.DataFrame(columns=["代碼"])
+        watch_df["代碼"] = watch_df["代碼"].astype(str)
+        df["代碼"] = df["代碼"].astype(str)
+        merged = pd.merge(watch_df, df, on="代碼", how="left")
+        st.dataframe(merged[["代碼", "名稱", "價格", "殖利率", "技術燈號"]])
     except Exception as e:
-        st.error(f'讀取自選清單失敗：{e}')
+        st.error(f"讀取自選清單失敗：{e}")
+
+elif tab == "🚨 升溫區":
+    st.title("🚨 升溫區（建議減碼／賣出）")
+
+    try:
+        df = pd.read_csv("etf_data.csv")
+
+        # 假設進入升溫區條件：殖利率 < 2 或 技術燈號為 🔴
+        heated = df[(df["殖利率"] < 2) | (df["技術燈號"] == "🔴")]
+
+        st.text_input("🔍 搜尋升溫 ETF（代碼或名稱）", key="search_heat", on_change=None)
+        df['代碼'] = df['代碼'].astype(str)
+        df['名稱'] = df['名稱'].astype(str)
+        keyword = st.session_state.get("search_heat", "").strip()
+        if keyword:
+            heated = heated[heated["代碼"].str.contains(keyword) | heated["名稱"].str.contains(keyword)]
+
+        if heated.empty:
+            st.success("✅ 目前沒有 ETF 進入升溫區")
+        else:
+            for _, row in heated.iterrows():
+                st.write(f"⚠️ {row['代碼']} {row['名稱']}｜殖利率 {row['殖利率']}%，技術燈號：{row['技術燈號']}")
+                reason = []
+                if row["殖利率"] < 2:
+                    reason.append("殖利率偏低")
+                if row["技術燈號"] == "🔴":
+                    reason.append("技術指標過熱")
+                st.info("📌 升溫原因：" + "、".join(reason))
+    except Exception as e:
+        st.error(f"讀取升溫區資料失敗：{e}")
