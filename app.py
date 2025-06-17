@@ -111,6 +111,31 @@ elif tab == "🗂 自選清單":
                     st.write(f"✅ {etf} 建議佈局 {shares} 股（單價 {price} 元）")
                 else:
                     st.write(f"⚠️ {etf} 資料缺失")
+
 elif tab == "🚨 升溫區":
-    st.title("🚨 升溫區")
-    st.info("這裡會列出建議減碼／賣出的 ETF 並顯示原因")
+    st.title("🚨 升溫區（建議減碼／賣出）")
+
+    try:
+        df = pd.read_csv("etf_data.csv")
+
+        # 假設進入升溫區條件：殖利率 < 2 或 技術燈號為 🔴
+        heated = df[(df["殖利率"] < 2) | (df["技術燈號"] == "🔴")]
+
+        st.text_input("🔍 搜尋升溫 ETF（代碼或名稱）", key="search_heat", on_change=None)
+        keyword = st.session_state.get("search_heat", "").strip()
+        if keyword:
+            heated = heated[heated["代碼"].str.contains(keyword) | heated["名稱"].str.contains(keyword)]
+
+        if heated.empty:
+            st.success("✅ 目前沒有 ETF 進入升溫區")
+        else:
+            for _, row in heated.iterrows():
+                st.write(f"⚠️ {row['代碼']} {row['名稱']}｜殖利率 {row['殖利率']}%，技術燈號：{row['技術燈號']}")
+                reason = []
+                if row["殖利率"] < 2:
+                    reason.append("殖利率偏低")
+                if row["技術燈號"] == "🔴":
+                    reason.append("技術指標過熱")
+                st.info("📌 升溫原因：" + "、".join(reason))
+    except Exception as e:
+        st.error(f"讀取升溫區資料失敗：{e}")
