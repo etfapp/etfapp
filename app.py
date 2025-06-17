@@ -88,7 +88,18 @@ elif tab == "🗂 自選清單":
     if st.button("➕ 加入自選"):
         if code_input:
             try:
-                watch_df = pd.read_csv(watchlist_file) if os.path.exists(watchlist_file) else pd.DataFrame(columns=["代碼"])
+                
+import os
+default_columns = ["代碼", "名稱", "價格", "殖利率", "技術燈號"]
+if os.path.exists(watchlist_file):
+    watch_df = pd.read_csv(watchlist_file)
+    for col in default_columns:
+        if col not in watch_df.columns:
+            watch_df[col] = None
+    watch_df = watch_df[default_columns]
+else:
+    watch_df = pd.DataFrame(columns=default_columns)
+
                 if code_input not in watch_df["代碼"].astype(str).values:
                     watch_df = pd.concat([watch_df, pd.DataFrame([{"代碼": code_input}])], ignore_index=True)
                     watch_df.to_csv(watchlist_file, index=False)
@@ -100,7 +111,18 @@ elif tab == "🗂 自選清單":
 
     # 顯示自選清單詳細資料
     try:
-        watch_df = pd.read_csv(watchlist_file) if os.path.exists(watchlist_file) else pd.DataFrame(columns=["代碼"])
+        
+import os
+default_columns = ["代碼", "名稱", "價格", "殖利率", "技術燈號"]
+if os.path.exists(watchlist_file):
+    watch_df = pd.read_csv(watchlist_file)
+    for col in default_columns:
+        if col not in watch_df.columns:
+            watch_df[col] = None
+    watch_df = watch_df[default_columns]
+else:
+    watch_df = pd.DataFrame(columns=default_columns)
+
         watch_df["代碼"] = watch_df["代碼"].astype(str)
         df["代碼"] = df["代碼"].astype(str)
         merged = pd.merge(watch_df, df, on="代碼", how="left")
