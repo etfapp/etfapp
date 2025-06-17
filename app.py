@@ -26,21 +26,10 @@ if tab == "🏠 首頁":
             st.success("✅ 資料更新完成")
         except Exception as e:
             st.error(f"❌ 更新失敗：{e}")
-    
-st.markdown("""
-# 💼 MyETF 助手
-打造專屬你的 ETF 智能選股系統  
-📆 每日早上 8:30 與下午 17:00 自動更新 📩 可串接 LINE Notify
-
----
-""")
-
-st.subheader("📊 今日市場溫度")
-
     st.subheader("🔔 通知測試")
     if st.button("📨 模擬發送通知"):
         st.success("✅ 模擬通知已發送至 LINE")
-
+    st.subheader("📊 今日市場溫度")
     st.success("✅ 建議佈局，市場風險偏低")
     df = load_data()
     if df.empty:
@@ -54,7 +43,6 @@ st.subheader("📊 今日市場溫度")
         alert = df[df["殖利率"] < 2].head(5)
         for _, row in alert.iterrows():
             st.write(f"⚠️ {row['代碼']} {row['名稱']}｜殖利率：{row['殖利率']}%")
-
 elif tab == "📋 ETF 總表":
     st.title("📋 ETF 總表")
     try:
