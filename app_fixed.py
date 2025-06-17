@@ -52,7 +52,7 @@ elif tab == "📋 ETF 總表":
         df['名稱'] = df['名稱'].astype(str)
         keyword = st.session_state.get("search_etf", "").strip()
         if keyword:
-            df = df[df['代碼'].str.contains(keyword, case=False) | df['名稱'].str.contains(keyword, case=False)]
+        df = df[df['代碼'].str.contains(keyword, case=False) | df['名稱'].str.contains(keyword, case=False)]
         st.dataframe(df, use_container_width=True)
     except Exception as e:
         st.error(f"載入 ETF 資料失敗：{e}")
