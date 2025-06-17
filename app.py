@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from data_updater import update_etf_data
+import os
 
 st.set_page_config(page_title="📊 MyETF 助手", layout="wide")
 tab = st.sidebar.radio("📌 請選擇功能", [
