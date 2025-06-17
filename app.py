@@ -48,11 +48,13 @@ elif tab == "📋 ETF 總表":
     try:
         df = pd.read_csv("etf_data.csv")
         st.text_input("🔍 搜尋 ETF（代碼或名稱）", key="search_etf", on_change=None)
-        df['代碼'] = df['代碼'].astype(str)
-        df['名稱'] = df['名稱'].astype(str)
+
+    # 🔧 修正欄位型別以支援 .str.contains()
+    df['代碼'] = df['代碼'].astype(str)
+    df['名稱'] = df['名稱'].astype(str)
         keyword = st.session_state.get("search_etf", "").strip()
         if keyword:
-        df = df[df['代碼'].str.contains(keyword, case=False) | df['名稱'].str.contains(keyword, case=False)]
+            df = df[df["代碼"].str.contains(keyword) | df["名稱"].str.contains(keyword)]
         st.dataframe(df, use_container_width=True)
     except Exception as e:
         st.error(f"載入 ETF 資料失敗：{e}")
@@ -63,8 +65,6 @@ elif tab == "📈 動態清單":
         df = pd.read_csv("etf_data.csv")
         filtered = df[(df["殖利率"] > 4) & (df["技術燈號"] == "🟢")]
         st.text_input("🔍 搜尋推薦 ETF（代碼或名稱）", key="search_reco", on_change=None)
-        df['代碼'] = df['代碼'].astype(str)
-        df['名稱'] = df['名稱'].astype(str)
         keyword = st.session_state.get("search_reco", "").strip()
         if keyword:
             filtered = filtered[filtered["代碼"].str.contains(keyword) | filtered["名稱"].str.contains(keyword)]
@@ -76,36 +76,70 @@ elif tab == "📈 動態清單":
         st.error(f"讀取推薦清單失敗：{e}")
 
 
-
 elif tab == "🗂 自選清單":
-    st.title("🗂 我的自選清單")
-    watchlist_file = "watchlist.csv"
-    df = load_data()
-
-    # 新增自選
-    code_input = st.text_input("🔍 輸入想加入的 ETF 代碼（如 0050）", key="add_code")
-    if st.button("➕ 加入自選"):
-        if code_input:
-            try:
-                watch_df = pd.read_csv(watchlist_file) if os.path.exists(watchlist_file) else pd.DataFrame(columns=["代碼"])
-                if code_input not in watch_df["代碼"].astype(str).values:
-                    watch_df = pd.concat([watch_df, pd.DataFrame([{"代碼": code_input}])], ignore_index=True)
-                    watch_df.to_csv(watchlist_file, index=False)
-                    st.success(f"{code_input} 已加入自選清單")
-                else:
-                    st.info(f"{code_input} 已在自選清單中")
-            except Exception as e:
-                st.error(f"無法加入：{e}")
-
-    # 顯示自選清單詳細資料
+    st.title("🗂 自選清單")
     try:
-        watch_df = pd.read_csv(watchlist_file) if os.path.exists(watchlist_file) else pd.DataFrame(columns=["代碼"])
-        watch_df["代碼"] = watch_df["代碼"].astype(str)
-        df["代碼"] = df["代碼"].astype(str)
-        merged = pd.merge(watch_df, df, on="代碼", how="left")
-        st.dataframe(merged[["代碼", "名稱", "價格", "殖利率", "技術燈號"]])
+        df_all = pd.read_csv("etf_data.csv")
+        df_watch = pd.read_csv("watchlist.csv")
+        df_watch["代碼"] = df_watch["代碼"].astype(str)
+        df_all["代碼"] = df_all["代碼"].astype(str)
+
+        df_merged = pd.merge(df_watch, df_all, on="代碼", how="left")
+
+        if df_merged.empty:
+            st.warning("尚未加入任何自選 ETF")
+        else:
+            st.dataframe(df_merged[["代碼", "名稱_x", "價格", "殖利率", "位階分數"]].rename(columns={"名稱_x": "名稱"}), use_container_width=True)
+
+            st.markdown("🔢 **股數計算（模擬）**")
+            cash = st.number_input("💰 可投入金額（元）", min_value=0, step=1000)
+            if cash > 0:
+                df_valid = df_merged.dropna(subset=["價格"])
+                df_valid["可買股數"] = (cash / df_valid["價格"]).astype(int)
+                st.dataframe(df_valid[["代碼", "名稱_x", "價格", "可買股數"]].rename(columns={"名稱_x": "名稱"}), use_container_width=True)
     except Exception as e:
-        st.error(f"讀取自選清單失敗：{e}")
+        st.error(f"❌ 載入自選清單失敗：{e}")
+
+    st.title("🗂 我的自選清單")
+
+    if "watchlist" not in st.session_state:
+        st.session_state.watchlist = []
+
+    new_etf = st.text_input("🔍 輸入想加入的 ETF 代碼（如 0050）")
+    if st.button("➕ 加入自選"):
+        if new_etf and new_etf not in st.session_state.watchlist:
+            st.session_state.watchlist.append(new_etf)
+            st.success(f"{new_etf} 已加入自選清單")
+
+    st.subheader("📋 自選 ETF 清單")
+    if st.session_state.watchlist:
+        st.write(st.session_state.watchlist)
+    else:
+        st.info("尚未加入任何自選 ETF")
+
+    st.subheader("💧 水位計算機")
+    market_position = st.slider("目前市場位階建議佈局比例 (%)", 0, 100, 40)
+    cash = st.number_input("請輸入目前手中現金 (元)", value=100000)
+    deployable = int(cash * market_position / 100)
+    st.write(f"💰 建議可佈局金額：約 {deployable:,} 元")
+
+    st.subheader("📐 存股計算機")
+    layout_count = st.number_input("預計佈局 ETF 檔數", min_value=1, value=2)
+    st.write("👇 系統將幫你平均分配以下每檔投入金額與估算股數")
+    if st.button("📊 計算佈局股數"):
+        if not st.session_state.watchlist:
+            st.warning("請先加入至少 1 檔自選 ETF")
+        else:
+            amount_per_etf = deployable / layout_count
+            df = pd.read_csv("etf_data.csv")
+            for etf in st.session_state.watchlist[:layout_count]:
+                row = df[df["代碼"] == etf]
+                if not row.empty:
+                    price = float(row.iloc[0]["價格"])
+                    shares = int(amount_per_etf // price)
+                    st.write(f"✅ {etf} 建議佈局 {shares} 股（單價 {price} 元）")
+                else:
+                    st.write(f"⚠️ {etf} 資料缺失")
 
 elif tab == "🚨 升溫區":
     st.title("🚨 升溫區（建議減碼／賣出）")
@@ -117,8 +151,6 @@ elif tab == "🚨 升溫區":
         heated = df[(df["殖利率"] < 2) | (df["技術燈號"] == "🔴")]
 
         st.text_input("🔍 搜尋升溫 ETF（代碼或名稱）", key="search_heat", on_change=None)
-        df['代碼'] = df['代碼'].astype(str)
-        df['名稱'] = df['名稱'].astype(str)
         keyword = st.session_state.get("search_heat", "").strip()
         if keyword:
             heated = heated[heated["代碼"].str.contains(keyword) | heated["名稱"].str.contains(keyword)]
