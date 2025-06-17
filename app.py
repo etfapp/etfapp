@@ -37,9 +37,9 @@ st.markdown("""
 
 st.subheader("📊 今日市場溫度")
 
-st.subheader("🔔 通知測試")
-if st.button("📨 模擬發送通知"):
-st.success("✅ 模擬通知已發送至 LINE")
+    st.subheader("🔔 通知測試")
+    if st.button("📨 模擬發送通知"):
+        st.success("✅ 模擬通知已發送至 LINE")
 
     st.success("✅ 建議佈局，市場風險偏低")
     df = load_data()
