@@ -49,6 +49,8 @@ elif tab == "📋 ETF 總表":
         df = pd.read_csv("etf_data.csv")
         st.text_input("🔍 搜尋 ETF（代碼或名稱）", key="search_etf", on_change=None)
         keyword = st.session_state.get("search_etf", "").strip()
+    df['代碼'] = df['代碼'].astype(str).fillna('')
+    df['名稱'] = df['名稱'].astype(str).fillna('')
         if keyword:
             df = df[df["代碼"].str.contains(keyword) | df["名稱"].str.contains(keyword)]
         st.dataframe(df, use_container_width=True)
@@ -62,6 +64,8 @@ elif tab == "📈 動態清單":
         filtered = df[(df["殖利率"] > 4) & (df["技術燈號"] == "🟢")]
         st.text_input("🔍 搜尋推薦 ETF（代碼或名稱）", key="search_reco", on_change=None)
         keyword = st.session_state.get("search_reco", "").strip()
+    df['代碼'] = df['代碼'].astype(str).fillna('')
+    df['名稱'] = df['名稱'].astype(str).fillna('')
         if keyword:
             filtered = filtered[filtered["代碼"].str.contains(keyword) | filtered["名稱"].str.contains(keyword)]
         if filtered.empty:
@@ -125,6 +129,8 @@ elif tab == "🚨 升溫區":
 
         st.text_input("🔍 搜尋升溫 ETF（代碼或名稱）", key="search_heat", on_change=None)
         keyword = st.session_state.get("search_heat", "").strip()
+    df['代碼'] = df['代碼'].astype(str).fillna('')
+    df['名稱'] = df['名稱'].astype(str).fillna('')
         if keyword:
             heated = heated[heated["代碼"].str.contains(keyword) | heated["名稱"].str.contains(keyword)]
 
