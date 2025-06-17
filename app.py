@@ -48,6 +48,10 @@ elif tab == "📋 ETF 總表":
     try:
         df = pd.read_csv("etf_data.csv")
         st.text_input("🔍 搜尋 ETF（代碼或名稱）", key="search_etf", on_change=None)
+    if df['代碼'].dtype != 'object':
+        df['代碼'] = df['代碼'].astype(str)
+    if df['名稱'].dtype != 'object':
+        df['名稱'] = df['名稱'].astype(str)
         keyword = st.session_state.get("search_etf", "").strip()
         if keyword:
             df = df[df["代碼"].str.contains(keyword) | df["名稱"].str.contains(keyword)]
